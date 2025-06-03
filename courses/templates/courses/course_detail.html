@@ -1,0 +1,111 @@
+{% extends 'courses/base.html' %}
+
+{% block title %}{{ course.title }} - 선생님 홈페이지{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Course Header -->
+    <div class="row mb-5">
+        <div class="col-lg-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'courses:home' %}">홈</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_list' %}">강의 목록</a></li>
+                    <li class="breadcrumb-item active">{{ course.title }}</li>
+                </ol>
+            </nav>
+            
+            <h1 class="display-4 mb-3">{{ course.title }}</h1>
+            <p class="lead text-muted">{{ course.description }}</p>
+            
+            <div class="course-info mb-4">
+                <span class="badge bg-primary me-2">
+                    <i class="fas fa-user"></i> {{ course.instructor.get_full_name|default:course.instructor.username }}
+                </span>
+                <span class="badge bg-success me-2">
+                    <i class="fas fa-list"></i> {{ chapters.count }}개 챕터
+                </span>
+                <span class="badge bg-info">
+                    <i class="fas fa-calendar"></i> {{ course.created_at|date:"Y년 m월 d일" }}
+                </span>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            {% if course.thumbnail %}
+            <img src="{{ course.thumbnail.url }}" class="img-fluid rounded shadow" alt="{{ course.title }}">
+            {% else %}
+            <div class="bg-gradient rounded shadow d-flex align-items-center justify-content-center" 
+                 style="height: 250px; background: linear-gradient(45deg, #667eea, #764ba2);">
+                <i class="fas fa-graduation-cap fa-5x text-white"></i>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Course Content -->
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">📚 강의 목차</h2>
+            
+            {% for chapter in chapters %}
+            <div class="chapter-item">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="h4 mb-0">
+                        <span class="badge bg-secondary me-2">{{ forloop.counter }}</span>
+                        {{ chapter.title }}
+                    </h3>
+                    <small class="text-muted">{{ chapter.lessons.count }}개 레슨</small>
+                </div>
+                
+                {% if chapter.description %}
+                <p class="text-muted mb-3">{{ chapter.description }}</p>
+                {% endif %}
+                
+                <div class="lessons-list">
+                    {% for lesson in chapter.lessons.all %}
+                    <div class="lesson-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1">
+                                    <a href="{% url 'courses:lesson_detail' lesson.id %}" class="text-decoration-none">
+                                        {{ forloop.counter }}. {{ lesson.title }}
+                                    </a>
+                                </h5>
+                                {% if lesson.description %}
+                                <small class="text-muted">{{ lesson.description|truncatewords:15 }}</small>
+                                {% endif %}
+                            </div>
+                            <div class="lesson-actions">
+                                {% if lesson.youtube_url %}
+                                <span class="badge bg-danger me-2">
+                                    <i class="fab fa-youtube"></i> 동영상
+                                </span>
+                                {% endif %}
+                                {% if lesson.duration %}
+                                <small class="text-muted">{{ lesson.duration }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="alert alert-warning">
+                        이 챕터에는 아직 레슨이 없습니다.
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="alert alert-info text-center">
+                <h4>📝 이 강의에는 아직 챕터가 없습니다</h4>
+                <p>관리자 페이지에서 챕터와 레슨을 추가해주세요.</p>
+                <a href="/admin/" class="btn btn-primary">관리자 페이지</a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Font Awesome Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+{% endblock %} 

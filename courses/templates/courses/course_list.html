@@ -1,0 +1,67 @@
+{% extends 'courses/base.html' %}
+
+{% block title %}강의 목록 - 선생님 홈페이지{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row mb-5">
+        <div class="col-12 text-center">
+            <h1 class="display-4 mb-3">📚 전체 강의</h1>
+            <p class="lead text-muted">다양한 주제의 강의를 만나보세요</p>
+        </div>
+    </div>
+    
+    <div class="row">
+        {% for course in courses %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card course-card h-100">
+                {% if course.thumbnail %}
+                <img src="{{ course.thumbnail.url }}" class="card-img-top course-thumbnail" alt="{{ course.title }}">
+                {% else %}
+                <div class="card-img-top course-thumbnail bg-gradient d-flex align-items-center justify-content-center" 
+                     style="background: linear-gradient(45deg, #667eea, #764ba2);">
+                    <i class="fas fa-graduation-cap fa-4x text-white"></i>
+                </div>
+                {% endif %}
+                
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">{{ course.title }}</h5>
+                    <p class="card-text text-muted">{{ course.description|truncatewords:15 }}</p>
+                    
+                    <div class="course-meta mb-3">
+                        <small class="text-muted d-block">
+                            <i class="fas fa-user"></i> 강사: {{ course.instructor.get_full_name|default:course.instructor.username }}
+                        </small>
+                        <small class="text-muted d-block">
+                            <i class="fas fa-list"></i> 챕터: {{ course.chapters.count }}개
+                        </small>
+                        <small class="text-muted d-block">
+                            <i class="fas fa-calendar"></i> {{ course.created_at|date:"Y년 m월 d일" }}
+                        </small>
+                    </div>
+                    
+                    <div class="mt-auto">
+                        <a href="{% url 'courses:course_detail' course.id %}" class="btn btn-primary w-100">
+                            강의 시작하기 <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <div class="alert alert-info">
+                    <h3>🎓 아직 등록된 강의가 없습니다</h3>
+                    <p class="mb-3">관리자 페이지에서 새로운 강의를 추가해보세요.</p>
+                    <a href="/admin/" class="btn btn-primary">관리자 페이지로 이동</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Font Awesome Icons -->
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+{% endblock %} 

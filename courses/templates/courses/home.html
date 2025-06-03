@@ -1,0 +1,104 @@
+{% extends 'courses/base.html' %}
+
+{% block title %}홈 - 선생님 홈페이지{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <h1 class="display-4 mb-4">🎓 온라인 강의 플랫폼</h1>
+        <p class="lead mb-4">양질의 교육 콘텐츠로 여러분의 성장을 도와드립니다</p>
+        <a href="{% url 'courses:course_list' %}" class="btn btn-light btn-lg">강의 둘러보기</a>
+    </div>
+</section>
+
+<!-- Featured Courses -->
+<section class="py-5">
+    <div class="container">
+        <div class="row mb-5">
+            <div class="col-12 text-center">
+                <h2 class="display-5 mb-3">인기 강의</h2>
+                <p class="lead text-muted">지금 가장 인기 있는 강의들을 만나보세요</p>
+            </div>
+        </div>
+        
+        <div class="row">
+            {% for course in courses %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card course-card h-100">
+                    {% if course.thumbnail %}
+                    <img src="{{ course.thumbnail.url }}" class="card-img-top course-thumbnail" alt="{{ course.title }}">
+                    {% else %}
+                    <div class="card-img-top course-thumbnail bg-primary d-flex align-items-center justify-content-center">
+                        <i class="fas fa-book fa-3x text-white"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">{{ course.title }}</h5>
+                        <p class="card-text text-muted">{{ course.description|truncatewords:20 }}</p>
+                        <div class="mt-auto">
+                            <small class="text-muted">강사: {{ course.instructor.get_full_name|default:course.instructor.username }}</small>
+                            <br>
+                            <small class="text-muted">챕터: {{ course.chapters.count }}개</small>
+                        </div>
+                        <a href="{% url 'courses:course_detail' course.id %}" class="btn btn-primary mt-3">강의 보기</a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center">
+                <div class="alert alert-info">
+                    <h4>아직 등록된 강의가 없습니다</h4>
+                    <p>관리자 페이지에서 강의를 추가해주세요.</p>
+                    <a href="/admin/" class="btn btn-primary">관리자 페이지</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-5 bg-white">
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center mb-5">
+                <h2 class="display-5 mb-3">왜 우리 플랫폼인가요?</h2>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="text-center">
+                    <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                        <i class="fas fa-video fa-2x"></i>
+                    </div>
+                    <h4>유튜브 연동</h4>
+                    <p class="text-muted">유튜브 동영상을 직접 임베드하여 원활한 학습 경험을 제공합니다.</p>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="text-center">
+                    <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                        <i class="fas fa-book fa-2x"></i>
+                    </div>
+                    <h4>체계적인 커리큘럼</h4>
+                    <p class="text-muted">챕터별로 정리된 체계적인 학습 과정으로 효율적인 학습이 가능합니다.</p>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="text-center">
+                    <div class="bg-warning text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                        <i class="fas fa-star fa-2x"></i>
+                    </div>
+                    <h4>전문 강사진</h4>
+                    <p class="text-muted">각 분야 전문가들이 직접 제작한 고품질 교육 콘텐츠입니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %} 

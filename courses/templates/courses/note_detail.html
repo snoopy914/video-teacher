@@ -1,0 +1,181 @@
+{% extends 'courses/base.html' %}
+
+{% block title %}공유 노트 - {{ note.lesson.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'courses:home' %}">홈</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'courses:course_list' %}">강의 목록</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'courses:course_detail' course.id %}">{{ course.title }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'courses:lesson_detail' note.lesson.id %}">{{ note.lesson.title }}</a></li>
+            <li class="breadcrumb-item active">공유 노트</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Note Card -->
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-gradient-primary text-white text-center py-4">
+                    <h3 class="mb-0">📝 공유된 노트</h3>
+                </div>
+                <div class="card-body p-5">
+                    <!-- Note Meta -->
+                    <div class="note-meta mb-4 p-3 bg-light rounded">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-2">
+                                    <strong><i class="fas fa-user text-primary"></i> 작성자:</strong> 
+                                    <span class="badge bg-info">{{ note.user.username }}</span>
+                                </p>
+                                <p class="mb-0">
+                                    <strong><i class="fas fa-calendar text-primary"></i> 작성일:</strong> 
+                                    {{ note.created_at|date:"Y년 m월 d일 H:i" }}
+                                </p>
+                            </div>
+                            <div class="col-md-6 text-md-end">
+                                <span class="badge bg-primary fs-6 mb-2">
+                                    <i class="fas fa-clock"></i> {{ note.get_timestamp_display }}
+                                </span>
+                                <br>
+                                <span class="badge bg-success">공유 노트</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Note Content -->
+                    <div class="note-content mb-4">
+                        <h5 class="text-primary mb-3">💭 노트 내용</h5>
+                        <div class="border-start border-primary border-3 ps-4 py-3 bg-light rounded">
+                            <div class="fs-5 lh-base">{{ note.content|linebreaks }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <a href="{% url 'courses:lesson_detail' note.lesson.id %}?t={{ note.timestamp }}" 
+                           class="btn btn-primary btn-lg">
+                            <i class="fas fa-play"></i> 이 시점부터 동영상 보기
+                        </a>
+                        <a href="{% url 'courses:lesson_detail' note.lesson.id %}" 
+                           class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-book-open"></i> 레슨 전체 보기
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lesson Info -->
+            <div class="card mt-4 border-0 shadow">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-video"></i> 관련 레슨 정보</h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="card-title text-primary">{{ note.lesson.title }}</h6>
+                    {% if note.lesson.description %}
+                    <p class="card-text text-muted">{{ note.lesson.description }}</p>
+                    {% endif %}
+                    
+                    <div class="lesson-info mt-3 p-3 bg-light rounded">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>강의:</strong> {{ course.title }}</p>
+                                <p class="mb-0"><strong>챕터:</strong> {{ chapter.order }}. {{ chapter.title }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>레슨:</strong> {{ note.lesson.order }}. {{ note.lesson.title }}</p>
+                                <p class="mb-0"><strong>강사:</strong> {{ course.instructor.get_full_name|default:course.instructor.username }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Share Section -->
+            <div class="card mt-4 border-0 shadow">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-share-alt"></i> 이 노트 공유하기</h5>
+                </div>
+                <div class="card-body">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control form-control-lg" id="shareUrl" 
+                               value="{{ request.build_absolute_uri }}" readonly>
+                        <button class="btn btn-success btn-lg" type="button" id="copyUrlBtn">
+                            <i class="fas fa-copy"></i> 복사
+                        </button>
+                    </div>
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i> 
+                        이 링크를 공유하면 다른 사람들이 이 노트와 함께 동영상을 볼 수 있습니다.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// URL 복사 기능
+document.getElementById('copyUrlBtn').addEventListener('click', function() {
+    const shareUrl = document.getElementById('shareUrl');
+    shareUrl.select();
+    shareUrl.setSelectionRange(0, 99999);
+    
+    try {
+        document.execCommand('copy');
+        this.innerHTML = '<i class="fas fa-check"></i> 복사됨!';
+        this.classList.remove('btn-success');
+        this.classList.add('btn-primary');
+        
+        setTimeout(() => {
+            this.innerHTML = '<i class="fas fa-copy"></i> 복사';
+            this.classList.remove('btn-primary');
+            this.classList.add('btn-success');
+        }, 2000);
+    } catch (err) {
+        alert('복사에 실패했습니다. 수동으로 복사해주세요.');
+    }
+});
+</script>
+
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.note-content {
+    font-size: 1.1em;
+    line-height: 1.7;
+}
+
+.note-meta {
+    border-left: 4px solid #007bff;
+}
+
+.border-primary {
+    border-color: #007bff !important;
+}
+
+.card {
+    border-radius: 15px;
+}
+
+.card-header {
+    font-weight: bold;
+    border-radius: 15px 15px 0 0 !important;
+}
+
+.btn-lg {
+    padding: 12px 30px;
+    font-weight: 500;
+}
+
+.lesson-info {
+    border-left: 3px solid #17a2b8;
+}
+</style>
+{% endblock %} 
+{% endblock %} 

@@ -1,0 +1,356 @@
+{% extends 'courses/base.html' %}
+{% load static %}
+
+{% block title %}{{ lesson.title }} - {{ course.title }} (뷰어 모드){% endblock %}
+
+{% block extra_css %}
+<style>
+    .video-container {
+        position: relative;
+        width: 100%;
+        height: 0;
+        padding-bottom: 65%; /* 더 큰 화면 비율로 조정 */
+        margin-bottom: 30px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    
+    .video-container iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 12px;
+    }
+    
+    /* 큰 화면에서는 더욱 크게 */
+    @media (min-width: 1200px) {
+        .video-container {
+            padding-bottom: 70%;
+        }
+        
+        .main-content {
+            max-width: none;
+        }
+    }
+    
+    /* 중간 화면에서도 적절한 크기 유지 */
+    @media (min-width: 768px) and (max-width: 1199px) {
+        .video-container {
+            padding-bottom: 60%;
+        }
+    }
+    
+    .lesson-content {
+        min-height: calc(100vh - 200px);
+    }
+    
+    .sidebar {
+        background: #f8f9fa;
+        border-left: 1px solid #dee2e6;
+        height: calc(100vh - 100px);
+        overflow-y: auto;
+        position: sticky;
+        top: 20px;
+        padding: 20px;
+    }
+    
+    .note-item {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        transition: all 0.2s;
+    }
+    
+    .note-item:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transform: translateY(-1px);
+    }
+    
+    .note-timestamp {
+        font-weight: bold;
+        color: #dc3545;
+        cursor: pointer;
+        text-decoration: none;
+        font-size: 0.9em;
+    }
+    
+    .note-timestamp:hover {
+        color: #c82333;
+        text-decoration: underline;
+    }
+    
+    .note-content {
+        margin-top: 8px;
+        font-size: 0.9em;
+        color: #495057;
+        line-height: 1.4;
+    }
+    
+    .note-author {
+        font-size: 0.8em;
+        color: #6c757d;
+        margin-top: 8px;
+        border-top: 1px solid #f1f3f4;
+        padding-top: 8px;
+    }
+    
+    .viewer-badge {
+        background: linear-gradient(45deg, #17a2b8, #138496);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: bold;
+        margin-bottom: 20px;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .no-notes {
+        text-align: center;
+        color: #6c757d;
+        font-style: italic;
+        padding: 40px 20px;
+    }
+    
+    .share-info {
+        background: #e3f2fd;
+        border: 1px solid #90caf9;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .share-info h6 {
+        color: #1976d2;
+        margin-bottom: 10px;
+    }
+    
+    .lesson-header {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+    }
+    
+    /* 전체 컨테이너를 더 넓게 */
+    .container-fluid {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    /* 메인 콘텐츠 영역 확장 */
+    .main-content {
+        flex: 1;
+        padding-right: 20px;
+    }
+    
+    /* 비디오 영역을 더 강조 */
+    .video-section {
+        background: linear-gradient(145deg, #f8f9fa 0%, #ffffff 100%);
+        padding: 25px;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        margin-bottom: 30px;
+    }
+    
+    .video-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 20px;
+        text-align: center;
+        padding: 10px;
+        background: rgba(255,255,255,0.8);
+        border-radius: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- 메인 콘텐츠 -->
+        <div class="col-lg-9 main-content">
+            <div class="lesson-header">
+                <div class="viewer-badge">
+                    <i class="fas fa-eye"></i> 뷰어 모드
+                </div>
+                
+                <div class="share-info">
+                    <h6><i class="fas fa-share-alt"></i> 공유된 레슨</h6>
+                    <p class="mb-0">이 레슨은 읽기 전용 모드로 공유되었습니다. 동영상 시청과 노트 조회만 가능합니다.</p>
+                </div>
+                
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">{{ course.title }}</li>
+                        <li class="breadcrumb-item">{{ chapter.title }}</li>
+                        <li class="breadcrumb-item active" aria-current="page">{{ lesson.title }}</li>
+                    </ol>
+                </nav>
+                
+                <h1 class="mb-3">{{ lesson.title }}</h1>
+                {% if lesson.description %}
+                    <p class="text-muted">{{ lesson.description }}</p>
+                {% endif %}
+            </div>
+            
+            {% if lesson.get_youtube_embed_url %}
+                <div class="video-section">
+                    <div class="video-title">
+                        <i class="fas fa-play-circle me-2"></i>강의 영상
+                    </div>
+                    <div class="video-container">
+                        <iframe 
+                            id="youtube-player"
+                            src="{{ lesson.get_youtube_embed_url }}"
+                            frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                </div>
+            {% endif %}
+            
+            {% if lesson.content %}
+                <div class="lesson-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-book"></i> 레슨 내용</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="lesson-text">
+                                {{ lesson.content|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- 사이드바 - 노트 목록 -->
+        <div class="col-lg-3">
+            <div class="sidebar">
+                <h5 class="mb-3">
+                    <i class="fas fa-sticky-note"></i> 
+                    레슨 노트 
+                    <span class="badge badge-secondary" id="notes-count">0</span>
+                </h5>
+                
+                <div id="sidebar-notes-list">
+                    <div class="no-notes">
+                        <i class="fas fa-clipboard-list fa-2x mb-3"></i>
+                        <p>로딩 중...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+let player;
+let playerReady = false;
+
+// YouTube API 준비
+function onYouTubeIframeAPIReady() {
+    {% if lesson.get_youtube_video_id %}
+    player = new YT.Player('youtube-player', {
+        videoId: '{{ lesson.get_youtube_video_id }}',
+        events: {
+            'onReady': onPlayerReady,
+        }
+    });
+    {% endif %}
+}
+
+function onPlayerReady(event) {
+    playerReady = true;
+    
+    // URL에서 시작 시간 파라미터가 있으면 해당 시간으로 이동
+    const urlParams = new URLSearchParams(window.location.search);
+    const startTime = urlParams.get('t');
+    if (startTime && parseInt(startTime) > 0) {
+        player.seekTo(parseInt(startTime), true);
+    }
+}
+
+// 타임스탬프 클릭 시 해당 시간으로 이동
+function jumpToTime(seconds) {
+    if (player && playerReady) {
+        player.seekTo(seconds, true);
+    }
+}
+
+// 노트 목록 로드
+function loadNotes() {
+    const lessonId = {{ lesson.id }};
+    fetch(`/api/lessons/${lessonId}/notes/`)
+        .then(response => response.json())
+        .then(data => {
+            displayNotes(data.notes);
+        })
+        .catch(error => {
+            console.error('노트 로드 실패:', error);
+        });
+}
+
+// 노트 목록 표시
+function displayNotes(notes) {
+    const notesContainer = document.getElementById('sidebar-notes-list');
+    const notesCount = document.getElementById('notes-count');
+    
+    notesCount.textContent = notes.length;
+    
+    if (notes.length === 0) {
+        notesContainer.innerHTML = `
+            <div class="no-notes">
+                <i class="fas fa-clipboard-list fa-2x mb-3"></i>
+                <p>이 레슨에는 아직 노트가 없습니다.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let notesHtml = '';
+    notes.forEach(note => {
+        notesHtml += `
+            <div class="note-item">
+                <a href="javascript:void(0)" 
+                   onclick="jumpToTime(${note.timestamp})" 
+                   class="note-timestamp">
+                    ${note.timestamp_display}
+                </a>
+                <div class="note-content">${note.content}</div>
+                <div class="note-author">
+                    <i class="fas fa-user"></i> ${note.author}
+                    <span class="float-right">
+                        <i class="fas fa-clock"></i> ${note.created_at}
+                    </span>
+                </div>
+            </div>
+        `;
+    });
+    
+    notesContainer.innerHTML = notesHtml;
+}
+
+// 페이지 로드 시 노트 불러오기
+document.addEventListener('DOMContentLoaded', function() {
+    loadNotes();
+    
+    // 3초마다 노트 새로고침 (실시간 업데이트)
+    setInterval(loadNotes, 3000);
+});
+</script>
+{% endblock %} 
