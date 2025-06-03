@@ -4,58 +4,109 @@
 # 작성자: AI Assistant
 # 날짜: 2025-06-03
 
-echo "🚀 Django 강의 플랫폼 EC2 배포를 시작합니다..."
-
 # 색상 정의
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# 프로젝트 디렉토리 설정
-PROJECT_DIR="/home/ec2-user/video-teacher"
-VENV_DIR="$PROJECT_DIR/venv"
+# 에러 발생 시 스크립트 중단
+set -e
 
-# 1. 프로젝트 디렉토리로 이동
-echo -e "${BLUE}📁 프로젝트 디렉토리로 이동 중...${NC}"
-cd $PROJECT_DIR || {
-    echo -e "${RED}❌ 프로젝트 디렉토리를 찾을 수 없습니다: $PROJECT_DIR${NC}"
-    exit 1
-}
+echo -e "${BLUE}🚀 Django 강의 플랫폼 EC2 배포를 시작합니다...${NC}"
 
-# 2. 가상환경 활성화
-echo -e "${BLUE}🐍 가상환경 활성화 중...${NC}"
-source $VENV_DIR/bin/activate || {
+# 프로젝트 디렉토리로 이동
+echo -e "${YELLOW}📁 프로젝트 디렉토리로 이동 중...${NC}"
+cd /home/ec2-user/video-teacher
+
+# Python3가 설치되어 있는지 확인
+if ! command -v python3 &> /dev/null; then
+    echo -e "${RED}❌ Python3가 설치되어 있지 않습니다.${NC}"
+    echo -e "${YELLOW}📦 Python3 설치 중...${NC}"
+    sudo dnf update -y
+    sudo dnf install -y python3 python3-pip python3-devel
+fi
+
+# 가상환경 생성
+echo -e "${YELLOW}🏗️  가상환경 생성 중...${NC}"
+if [ ! -d "venv" ]; then
+    python3 -m venv venv
+    echo -e "${GREEN}✅ 가상환경이 생성되었습니다.${NC}"
+else
+    echo -e "${CYAN}ℹ️  가상환경이 이미 존재합니다.${NC}"
+fi
+
+# 가상환경 활성화
+echo -e "${YELLOW}🐍 가상환경 활성화 중...${NC}"
+source venv/bin/activate
+
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}✅ 가상환경이 활성화되었습니다.${NC}"
+else
     echo -e "${RED}❌ 가상환경 활성화 실패${NC}"
     exit 1
-}
+fi
 
-# 3. 의존성 설치
-echo -e "${BLUE}📦 의존성 설치 중...${NC}"
-pip install -r requirements.txt
-pip install whitenoise gunicorn
+# pip 업그레이드
+echo -e "${YELLOW}📦 pip 업그레이드 중...${NC}"
+pip install --upgrade pip
 
-# 4. 기존 데이터베이스 및 마이그레이션 정리
-echo -e "${YELLOW}🗂️  기존 데이터베이스 및 마이그레이션 정리 중...${NC}"
-rm -f db.sqlite3
-rm -f courses/migrations/0003_add_lesson_share_fields.py
-rm -f courses/migrations/0004_alter_lesson_is_public_shareable.py
+# 추가 시스템 패키지 설치 (Pillow를 위한 의존성)
+echo -e "${YELLOW}📦 시스템 의존성 설치 중...${NC}"
+sudo dnf install -y libjpeg-turbo-devel zlib-devel gcc
 
-# 5. settings.py 수정 (CSS 문제 해결)
-echo -e "${BLUE}⚙️  Django 설정 파일 수정 중...${NC}"
+# 기본 패키지들 먼저 설치
+echo -e "${YELLOW}📦 기본 패키지 설치 중...${NC}"
+pip install Django==4.2.7
+pip install Pillow
+pip install python-decouple
+pip install whitenoise==6.6.0
+pip install gunicorn==21.2.0
+
+# requirements.txt가 있다면 추가 패키지 설치
+if [ -f "requirements.txt" ]; then
+    echo -e "${YELLOW}📦 requirements.txt에서 패키지 설치 중...${NC}"
+    pip install -r requirements.txt
+fi
+
+# 문제가 있는 마이그레이션 파일 삭제
+echo -e "${YELLOW}🗑️  기존 마이그레이션 파일 정리 중...${NC}"
+if [ -f "courses/migrations/0003_add_lesson_share_fields.py" ]; then
+    rm -f courses/migrations/0003_add_lesson_share_fields.py
+    echo -e "${GREEN}✅ 문제가 있는 마이그레이션 파일을 삭제했습니다.${NC}"
+fi
+
+# 기존 데이터베이스 백업 및 삭제
+if [ -f "db.sqlite3" ]; then
+    echo -e "${YELLOW}💾 기존 데이터베이스 백업 중...${NC}"
+    cp db.sqlite3 db.sqlite3.backup.$(date +%Y%m%d_%H%M%S)
+    rm -f db.sqlite3
+    echo -e "${GREEN}✅ 기존 데이터베이스를 백업하고 삭제했습니다.${NC}"
+fi
+
+# settings.py 완전히 재작성 (EC2용)
+echo -e "${YELLOW}⚙️  settings.py 설정 중...${NC}"
 cat > teacher_homepage/settings.py << 'EOF'
 import os
 from pathlib import Path
+from decouple import config
 
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-your-secret-key-here'
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here')
 
-DEBUG = True
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = config('DEBUG', default=True, cast=bool)
 
+# EC2 환경을 위한 ALLOWED_HOSTS 설정
 ALLOWED_HOSTS = ['*']
 
+# Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -63,13 +114,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'courses',
     'accounts',
+    'courses',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # WhiteNoise 추가
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -83,7 +134,7 @@ ROOT_URLCONF = 'teacher_homepage.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -98,6 +149,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'teacher_homepage.wsgi.application'
 
+# Database
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -105,6 +157,7 @@ DATABASES = {
     }
 }
 
+# Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -120,6 +173,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Internationalization
 LANGUAGE_CODE = 'ko-kr'
 TIME_ZONE = 'Asia/Seoul'
 USE_I18N = True
@@ -127,190 +181,160 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-STATICFILES_DIRS = []
-if os.path.exists(os.path.join(BASE_DIR, 'static')):
-    STATICFILES_DIRS.append(os.path.join(BASE_DIR, 'static'))
-
-# Whitenoise 설정
+# WhiteNoise 설정
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# staticfiles 디렉토리 설정
+STATICFILES_DIRS = []
+
+# 미디어 파일 설정
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# 로그인/로그아웃 설정
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 EOF
 
-# 6. 새로운 마이그레이션 생성 및 적용
-echo -e "${BLUE}🔄 새로운 마이그레이션 생성 및 적용 중...${NC}"
+echo -e "${GREEN}✅ settings.py가 업데이트되었습니다.${NC}"
+
+# static 디렉토리가 있다면 제거 (경고 메시지 방지)
+if [ -d "static" ]; then
+    rm -rf static
+fi
+
+# 새로운 마이그레이션 생성
+echo -e "${YELLOW}🔄 새로운 마이그레이션 생성 중...${NC}"
 python manage.py makemigrations
+
+# 마이그레이션 적용
+echo -e "${YELLOW}🔄 데이터베이스 마이그레이션 적용 중...${NC}"
 python manage.py migrate
 
-# 7. 정적 파일 수집
-echo -e "${BLUE}📁 정적 파일 수집 중...${NC}"
+# 정적 파일 수집
+echo -e "${YELLOW}📦 정적 파일 수집 중...${NC}"
 python manage.py collectstatic --noinput
 
-# 8. 슈퍼유저 생성 (자동)
-echo -e "${BLUE}👨‍💼 관리자 계정 생성 중...${NC}"
+# 관리자 계정 생성
+echo -e "${YELLOW}👤 관리자 계정 생성 중...${NC}"
 python manage.py shell -c "
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()
 if not User.objects.filter(username='admin').exists():
     User.objects.create_superuser('admin', 'admin@example.com', 'admin123')
-    print('✅ 관리자 계정 생성 완료: admin/admin123')
+    print('✅ 관리자 계정이 생성되었습니다 (admin/admin123)')
 else:
-    print('ℹ️  관리자 계정이 이미 존재합니다.')
+    print('ℹ️  관리자 계정이 이미 존재합니다')
 "
 
-# 9. 샘플 데이터 생성
-echo -e "${BLUE}📚 샘플 강의 데이터 생성 중...${NC}"
+# 샘플 데이터 생성
+echo -e "${YELLOW}📚 샘플 데이터 생성 중...${NC}"
 python manage.py shell -c "
-from courses.models import Course, Chapter, Lesson
-import secrets
 import string
+import secrets
+from courses.models import Course, Chapter, Lesson
 
-# 기존 데이터 삭제
-Course.objects.all().delete()
-
-print('📚 Django 강의 데이터 생성 중...')
-
-# 토큰 생성 함수
-def generate_token():
-    return ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(16))
-
-# Django 강의 생성
-course = Course.objects.create(
-    title='Django 웹 개발 입문',
-    description='Django를 이용한 웹 개발 기초부터 실전까지 완벽 마스터'
-)
-
-# 챕터 생성
-chapter = Chapter.objects.create(
-    course=course,
-    title='Django 기초',
-    order=1
-)
-
-# 레슨들 생성
-lessons_data = [
-    {
-        'title': 'Django 소개와 설치',
-        'content': '''Django는 파이썬으로 만들어진 무료 오픈소스 웹 프레임워크입니다.
-        
-주요 특징:
-• MTV (Model-Template-View) 패턴
-• ORM (Object-Relational Mapping) 지원
-• 강력한 관리자 인터페이스
-• 보안 기능 내장
-• 확장성과 재사용성
-
-설치 방법:
-pip install django==4.2.7''',
-        'video_url': 'https://www.youtube.com/embed/dQw4w9WgXcQ'
-    },
-    {
-        'title': '첫 번째 Django 프로젝트',
-        'content': '''Django 프로젝트를 생성하고 기본 구조를 이해해봅시다.
-        
-프로젝트 생성:
-django-admin startproject myproject
-
-앱 생성:
-python manage.py startapp myapp
-
-기본 구조:
-• settings.py: 프로젝트 설정
-• urls.py: URL 라우팅
-• models.py: 데이터베이스 모델
-• views.py: 비즈니스 로직
-• templates/: HTML 템플릿''',
-        'video_url': 'https://www.youtube.com/embed/dQw4w9WgXcQ'
-    },
-    {
-        'title': 'Django 모델 기초',
-        'content': '''Django 모델을 사용하여 데이터베이스와 상호작용하는 방법을 학습합니다.
-        
-모델 정의:
-class Post(models.Model):
-    title = models.CharField(max_length=200)
-    content = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-
-주요 필드 타입:
-• CharField: 짧은 문자열
-• TextField: 긴 텍스트
-• DateTimeField: 날짜와 시간
-• ForeignKey: 외래키 관계
-• ManyToManyField: 다대다 관계''',
-        'video_url': 'https://www.youtube.com/embed/dQw4w9WgXcQ'
-    },
-    {
-        'title': '마이그레이션과 데이터베이스',
-        'content': '''Django 마이그레이션 시스템을 통해 데이터베이스 스키마를 관리합니다.
-        
-마이그레이션 생성:
-python manage.py makemigrations
-
-마이그레이션 적용:
-python manage.py migrate
-
-주요 명령어:
-• showmigrations: 마이그레이션 상태 확인
-• sqlmigrate: SQL 쿼리 확인
-• migrate --fake: 가짜 마이그레이션 적용
-• dbshell: 데이터베이스 셸 접근''',
-        'video_url': 'https://www.youtube.com/embed/dQw4w9WgXcQ'
-    }
-]
-
-for i, lesson_data in enumerate(lessons_data, 1):
-    lesson = Lesson.objects.create(
-        chapter=chapter,
-        title=lesson_data['title'],
-        content=lesson_data['content'],
-        video_url=lesson_data['video_url'],
-        order=i,
-        is_public_shareable=True,
-        share_token=generate_token()
+# 기존 데이터 확인
+if Course.objects.exists():
+    print('ℹ️  샘플 데이터가 이미 존재합니다')
+else:
+    # Django 강의 생성
+    course = Course.objects.create(
+        title='Django 웹 개발 입문',
+        description='Django를 이용한 웹 개발 기초부터 실전까지'
     )
-    print(f'✅ 레슨 생성: {lesson.title} (토큰: {lesson.share_token})')
 
-print(f'✅ 총 {len(lessons_data)}개의 레슨이 생성되었습니다!')
-print('🎯 관리자 페이지에서 강의를 확인할 수 있습니다.')
+    # 챕터 생성
+    chapter = Chapter.objects.create(
+        course=course,
+        title='Django 기초',
+        order=1
+    )
+
+    # 공유 토큰 생성 함수
+    def generate_share_token():
+        return ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(16))
+
+    # 레슨들 생성
+    lessons = [
+        'Django 소개와 설치',
+        '첫 번째 Django 프로젝트',
+        'Django 모델 기초',
+        '마이그레이션과 데이터베이스'
+    ]
+
+    for i, lesson_title in enumerate(lessons, 1):
+        Lesson.objects.create(
+            chapter=chapter,
+            title=lesson_title,
+            content=f'{lesson_title}에 대한 상세한 설명입니다.',
+            video_url='https://www.youtube.com/embed/dQw4w9WgXcQ',
+            order=i,
+            is_public_shareable=True,
+            share_token=generate_share_token()
+        )
+
+    print('✅ 샘플 데이터 생성 완료!')
 "
 
-# 10. 서버 시작 스크립트 생성
-echo -e "${BLUE}🔧 서버 시작 스크립트 생성 중...${NC}"
+# EC2 서버 시작 스크립트 생성
+echo -e "${YELLOW}📝 EC2 서버 시작 스크립트 생성 중...${NC}"
 cat > start_ec2_server.sh << 'EOF'
 #!/bin/bash
+
+# 색상 정의
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+echo -e "${BLUE}🚀 Django 강의 플랫폼 서버를 시작합니다...${NC}"
+
+# 프로젝트 디렉토리로 이동
 cd /home/ec2-user/video-teacher
+
+# 가상환경 활성화
 source venv/bin/activate
-echo "🚀 Django 서버를 시작합니다..."
-echo "🌐 접속 주소: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):8000"
-echo "⚙️  관리자 페이지: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):8000/admin"
-echo "👨‍💼 관리자 계정: admin / admin123"
-echo ""
-python manage.py runserver 0.0.0.0:8000
+
+# 정적 파일 수집
+echo -e "${YELLOW}📦 정적 파일 수집 중...${NC}"
+python manage.py collectstatic --noinput
+
+# 데이터베이스 마이그레이션 확인
+echo -e "${YELLOW}🔄 데이터베이스 마이그레이션 확인...${NC}"
+python manage.py migrate
+
+# EC2 인스턴스의 퍼블릭 IP 가져오기
+EC2_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+
+echo -e "${GREEN}🌟 Gunicorn으로 Django 서버 시작...${NC}"
+
+# 백그라운드에서 Gunicorn 시작
+nohup gunicorn teacher_homepage.wsgi:application --bind 0.0.0.0:8000 --workers 3 > gunicorn.log 2>&1 &
+
+echo -e "${GREEN}✅ 서버가 시작되었습니다!${NC}"
+echo -e "${BLUE}🌐 외부 접속 주소: http://${EC2_IP}:8000${NC}"
+echo -e "${PURPLE}⚙️  관리자 페이지: http://${EC2_IP}:8000/admin${NC}"
+echo -e "${CYAN}👤 관리자 계정: admin / admin123${NC}"
+echo -e "${YELLOW}📋 로그 확인: tail -f gunicorn.log${NC}"
+echo -e "${YELLOW}🛑 서버 중지: pkill -f gunicorn${NC}"
 EOF
 
 chmod +x start_ec2_server.sh
 
-# 11. 배포 완료 메시지
-echo -e "${GREEN}🎉 배포가 완료되었습니다!${NC}"
+echo -e "${GREEN}🎉 EC2 배포가 완료되었습니다!${NC}"
+echo -e "${BLUE}📍 다음 명령어로 서버를 시작하세요:${NC}"
+echo -e "${YELLOW}   ./start_ec2_server.sh${NC}"
 echo ""
-echo -e "${YELLOW}📋 배포 정보:${NC}"
-echo -e "  • 프로젝트 위치: ${PROJECT_DIR}"
-echo -e "  • 데이터베이스: SQLite (새로 생성됨)"
-echo -e "  • 정적 파일: WhiteNoise로 서빙"
-echo -e "  • 관리자 계정: admin / admin123"
-echo -e "  • 샘플 강의: 4개 레슨 포함"
-echo ""
-echo -e "${YELLOW}🌐 접속 정보:${NC}"
-echo -e "  • 메인 사이트: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):8000"
-echo -e "  • 관리자 페이지: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):8000/admin"
-echo ""
-echo -e "${BLUE}🚀 서버 시작 방법:${NC}"
-echo -e "  ./start_ec2_server.sh"
-echo ""
-echo -e "${GREEN}✅ 모든 준비가 완료되었습니다!${NC}" 
+echo -e "${CYAN}🔧 유용한 명령어들:${NC}"
+echo -e "${YELLOW}   서버 상태 확인: ps aux | grep gunicorn${NC}"
+echo -e "${YELLOW}   서버 중지: pkill -f gunicorn${NC}"
+echo -e "${YELLOW}   로그 보기: tail -f gunicorn.log${NC}"
+EOF 
