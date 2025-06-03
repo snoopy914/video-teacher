@@ -330,17 +330,17 @@ python manage.py migrate
 # EC2 인스턴스의 퍼블릭 IP 가져오기
 EC2_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
 
-echo -e "${GREEN}🌟 Gunicorn으로 Django 서버 시작...${NC}"
+echo -e "${GREEN}🌟 Django 개발 서버로 시작...${NC}"
 
-# 백그라운드에서 Gunicorn 시작
-nohup gunicorn teacher_homepage.wsgi:application --bind 0.0.0.0:8000 --workers 3 > gunicorn.log 2>&1 &
-
-echo -e "${GREEN}✅ 서버가 시작되었습니다!${NC}"
+# Django 개발 서버로 실행 (정적 파일 서빙 지원)
+echo -e "${GREEN}✅ 서버를 시작합니다!${NC}"
 echo -e "${BLUE}🌐 외부 접속 주소: http://${EC2_IP}:8000${NC}"
 echo -e "${PURPLE}⚙️  관리자 페이지: http://${EC2_IP}:8000/admin${NC}"
 echo -e "${CYAN}👤 관리자 계정: admin / admin123${NC}"
-echo -e "${YELLOW}📋 로그 확인: tail -f gunicorn.log${NC}"
-echo -e "${YELLOW}🛑 서버 중지: pkill -f gunicorn${NC}"
+echo -e "${YELLOW}🛑 서버 중지: Ctrl+C${NC}"
+
+# Django 개발 서버 실행
+python manage.py runserver 0.0.0.0:8000
 EOF
 
 chmod +x start_ec2_server.sh
