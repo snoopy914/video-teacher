@@ -213,6 +213,31 @@ EOF
 
 echo -e "${GREEN}✅ settings.py가 업데이트되었습니다.${NC}"
 
+# urls.py 수정 (정적 파일 서빙 문제 해결)
+echo -e "${YELLOW}🔧 urls.py 정적 파일 서빙 설정 중...${NC}"
+cat > teacher_homepage/urls.py << 'EOF'
+"""
+URL configuration for teacher_homepage project.
+"""
+from django.contrib import admin
+from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', include('courses.urls')),
+    path('accounts/', include('accounts.urls')),
+]
+
+# 개발 환경에서 정적 파일 및 미디어 파일 서빙
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+EOF
+
+echo -e "${GREEN}✅ urls.py가 업데이트되었습니다.${NC}"
+
 # static 디렉토리가 있다면 제거 (경고 메시지 방지)
 if [ -d "static" ]; then
     rm -rf static
