@@ -110,7 +110,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = True  # EC2에서 정적 파일 서빙을 위해 True로 설정
 
 # EC2 환경을 위한 ALLOWED_HOSTS 설정
 ALLOWED_HOSTS = ['*']
