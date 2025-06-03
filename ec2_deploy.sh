@@ -290,7 +290,7 @@ else:
             chapter=chapter,
             title=lesson_title,
             content=f'{lesson_title}에 대한 상세한 설명입니다.',
-            video_url='https://www.youtube.com/embed/dQw4w9WgXcQ',
+            youtube_url='https://www.youtube.com/embed/dQw4w9WgXcQ',
             order=i,
             is_public_shareable=True,
             share_token=generate_share_token()
