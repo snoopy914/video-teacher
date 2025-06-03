@@ -74,9 +74,18 @@ fi
 
 # 문제가 있는 마이그레이션 파일 삭제
 echo -e "${YELLOW}🗑️  기존 마이그레이션 파일 정리 중...${NC}"
-if [ -f "courses/migrations/0003_add_lesson_share_fields.py" ]; then
-    rm -f courses/migrations/0003_add_lesson_share_fields.py
-    echo -e "${GREEN}✅ 문제가 있는 마이그레이션 파일을 삭제했습니다.${NC}"
+
+# courses 앱의 커스텀 마이그레이션 파일들 모두 삭제 (초기 마이그레이션만 남김)
+if [ -d "courses/migrations" ]; then
+    # __init__.py와 0001_initial.py만 남기고 모든 마이그레이션 파일 삭제
+    find courses/migrations -name "*.py" -not -name "__init__.py" -not -name "0001_initial.py" -delete
+    echo -e "${GREEN}✅ 기존 커스텀 마이그레이션 파일들을 정리했습니다.${NC}"
+fi
+
+# accounts 앱의 커스텀 마이그레이션 파일들도 정리
+if [ -d "accounts/migrations" ]; then
+    find accounts/migrations -name "*.py" -not -name "__init__.py" -not -name "0001_initial.py" -delete
+    echo -e "${GREEN}✅ accounts 앱 마이그레이션 파일들을 정리했습니다.${NC}"
 fi
 
 # 기존 데이터베이스 백업 및 삭제
