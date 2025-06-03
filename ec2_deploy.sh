@@ -247,16 +247,23 @@ echo -e "${YELLOW}📚 샘플 데이터 생성 중...${NC}"
 python manage.py shell -c "
 import string
 import secrets
+from django.contrib.auth import get_user_model
 from courses.models import Course, Chapter, Lesson
+
+User = get_user_model()
 
 # 기존 데이터 확인
 if Course.objects.exists():
     print('ℹ️  샘플 데이터가 이미 존재합니다')
 else:
+    # admin 사용자 가져오기
+    admin_user = User.objects.get(username='admin')
+    
     # Django 강의 생성
     course = Course.objects.create(
         title='Django 웹 개발 입문',
-        description='Django를 이용한 웹 개발 기초부터 실전까지'
+        description='Django를 이용한 웹 개발 기초부터 실전까지',
+        instructor=admin_user  # instructor 필드 추가
     )
 
     # 챕터 생성
